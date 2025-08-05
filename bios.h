@@ -65,7 +65,7 @@ void openBIOS() {
           M5Cardputer.Display.setCursor(10, 10);
           M5Cardputer.Display.setTextColor(BLACK);
           M5Cardputer.Display.println("Device Info:");
-          M5Cardputer.Display.println("Firmware: CardOS v1.0");
+          M5Cardputer.Display.println("Firmware: CardOS v6.5.1");
           M5Cardputer.Display.println("CPU: ESP32");
           M5Cardputer.Display.println("Flash: " + String(ESP.getFlashChipSize() / 1024) + " KB");
           M5Cardputer.Display.println("Heap: " + String(ESP.getFreeHeap() / 1024) + " KB free");
@@ -112,5 +112,6 @@ void openBIOS() {
 
   M5Cardputer.Display.fillScreen(BLUE);
 }
+
 
 #endif
