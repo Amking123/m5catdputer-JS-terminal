@@ -9,6 +9,7 @@
 #include "duktape.h"
 #include "keyboard.h"
 #include "menu.h"
+#include "bios.h"
 
 
 // Forward declarations
@@ -19,7 +20,7 @@ void registerJSBindings(duk_context *ctx);
 void processCommand(duk_context *ctx, String input) {
   input.trim();
   if (input.equalsIgnoreCase("help")) {
-    shellPrint("Commands: help, clear, menu, about, reboot, random, run <app>");
+    shellPrint("Commands: help, clear, menu, about, bios, reboot, random, run <app>");
     shellPrint("JS: print(), load(), run(), require(), getKey(), etc.");
   }
   else if (input.equalsIgnoreCase("clear")) {
@@ -37,6 +38,9 @@ void processCommand(duk_context *ctx, String input) {
     shellPrint("Rebooting...");
     delay(1000);
     ESP.restart();
+  }
+   else if (input == "bios") {
+    openBIOS();
   }
   else if (input.equalsIgnoreCase("menu")) {
   openMenu(ctx);
@@ -263,7 +267,6 @@ static duk_ret_t js_run(duk_context *ctx) {
   return 1;
 }
 
-// require(filename) with simple caching
 // require(filename) with CommonJS-style module system
 static duk_ret_t js_require(duk_context *ctx) {
   const char *filename = duk_to_string(ctx, 0);
