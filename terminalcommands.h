@@ -11,12 +11,10 @@
 #include "menu.h"
 #include "bios.h"
 
-
 // Forward declarations
 void registerJSBindings(duk_context *ctx);
 
 // ==== Terminal Command Processor ====
-
 void processCommand(duk_context *ctx, String input) {
   input.trim();
   if (input.equalsIgnoreCase("help")) {
@@ -31,7 +29,7 @@ void processCommand(duk_context *ctx, String input) {
    shellPrint("╔═══════════════════════════╗", CYAN);
    shellPrint("║  M5Cardputer JS Terminal  ║", CYAN);
    shellPrint("║  Created by [AMking123]   ║", CYAN);
-   shellPrint("║ Version 6.5.1 menu added  ║", CYAN);
+   shellPrint("║ Version 7.2.0 new commands║", CYAN);
    shellPrint("╚═══════════════════════════╝", CYAN);
   }
   else if (input.equalsIgnoreCase("reboot")) {
@@ -283,7 +281,7 @@ static duk_ret_t js_require(duk_context *ctx) {
     duk_pop(ctx);  // pop undefined
     duk_push_object(ctx);
     duk_dup(ctx, -1); // duplicate
-    duk_put_prop_string(ctx, -3, "modcache"); // global.modcache = {}
+    duk_put_prop_string(ctx, -3, "__modcache"); // global.__modcache = {}
   }
 
   // Check if module is already cached
@@ -337,6 +335,173 @@ static duk_ret_t js_require(duk_context *ctx) {
   return 1;
 }
 
+// ==== NEW: Advanced Display & Graphics Commands ====
+
+// clear() and fillScreen()
+static duk_ret_t js_fillScreen(duk_context *ctx) {
+  uint16_t color = (uint16_t)duk_to_uint(ctx, 0);
+  M5Cardputer.Display.fillScreen(color);
+  return 0;
+}
+static duk_ret_t js_clear(duk_context *ctx) {
+  // Alias for fillScreen
+  return js_fillScreen(ctx);
+}
+
+// drawCircle(x, y, r, color)
+static duk_ret_t js_drawCircle(duk_context *ctx) {
+  int x = duk_to_int(ctx, 0);
+  int y = duk_to_int(ctx, 1);
+  int r = duk_to_int(ctx, 2);
+  uint16_t color = (uint16_t)duk_to_uint(ctx, 3);
+  M5Cardputer.Display.drawCircle(x, y, r, color);
+  return 0;
+}
+
+// fillCircle(x, y, r, color)
+static duk_ret_t js_fillCircle(duk_context *ctx) {
+  int x = duk_to_int(ctx, 0);
+  int y = duk_to_int(ctx, 1);
+  int r = duk_to_int(ctx, 2);
+  uint16_t color = (uint16_t)duk_to_uint(ctx, 3);
+  M5Cardputer.Display.fillCircle(x, y, r, color);
+  return 0;
+}
+
+// drawLine(x1, y1, x2, y2, color)
+static duk_ret_t js_drawLine(duk_context *ctx) {
+  int x1 = duk_to_int(ctx, 0);
+  int y1 = duk_to_int(ctx, 1);
+  int x2 = duk_to_int(ctx, 2);
+  int y2 = duk_to_int(ctx, 3);
+  uint16_t color = (uint16_t)duk_to_uint(ctx, 4);
+  M5Cardputer.Display.drawLine(x1, y1, x2, y2, color);
+  return 0;
+}
+
+// drawTriangle(x1, y1, x2, y2, x3, y3, color)
+static duk_ret_t js_drawTriangle(duk_context *ctx) {
+  int x1 = duk_to_int(ctx, 0);
+  int y1 = duk_to_int(ctx, 1);
+  int x2 = duk_to_int(ctx, 2);
+  int y2 = duk_to_int(ctx, 3);
+  int x3 = duk_to_int(ctx, 4);
+  int y3 = duk_to_int(ctx, 5);
+  uint16_t color = (uint16_t)duk_to_uint(ctx, 6);
+  M5Cardputer.Display.drawTriangle(x1, y1, x2, y2, x3, y3, color);
+  return 0;
+}
+
+// fillTriangle(x1, y1, x2, y2, x3, y3, color)
+static duk_ret_t js_fillTriangle(duk_context *ctx) {
+  int x1 = duk_to_int(ctx, 0);
+  int y1 = duk_to_int(ctx, 1);
+  int x2 = duk_to_int(ctx, 2);
+  int y2 = duk_to_int(ctx, 3);
+  int x3 = duk_to_int(ctx, 4);
+  int y3 = duk_to_int(ctx, 5);
+  uint16_t color = (uint16_t)duk_to_uint(ctx, 6);
+  M5Cardputer.Display.fillTriangle(x1, y1, x2, y2, x3, y3, color);
+  return 0;
+}
+
+// setCursor(x, y)
+static duk_ret_t js_setCursor(duk_context *ctx) {
+  int x = duk_to_int(ctx, 0);
+  int y = duk_to_int(ctx, 1);
+  M5Cardputer.Display.setCursor(x, y);
+  return 0;
+}
+
+// hexToColor(hexString) -> uint16_t color
+static duk_ret_t js_hexToColor(duk_context *ctx) {
+  const char *hex_str = duk_to_string(ctx, 0);
+  if (!hex_str) {
+    duk_push_uint(ctx, 0); // Return black on invalid input
+    return 1;
+  }
+  // Remove '#' if present
+  if (hex_str[0] == '#') {
+    hex_str++;
+  }
+  long hex_val = strtol(hex_str, NULL, 16);
+  int r = (hex_val >> 16) & 0xFF;
+  int g = (hex_val >> 8) & 0xFF;
+  int b = hex_val & 0xFF;
+  uint16_t c = M5Cardputer.Display.color565(r, g, b);
+  duk_push_uint(ctx, c);
+  return 1;
+}
+
+// ==== NEW: Advanced Filesystem Commands ====
+
+// listDir(path) -> array of filenames
+static duk_ret_t js_listDir(duk_context *ctx) {
+  const char *path = duk_to_string(ctx, 0);
+  File root = SD.open(path);
+  if (!root || !root.isDirectory()) {
+    duk_push_array(ctx); // Return empty array on failure
+    return 1;
+  }
+  duk_idx_t arr = duk_push_array(ctx);
+  int idx = 0;
+  File file = root.openNextFile();
+  while (file) {
+    duk_push_string(ctx, file.name());
+    duk_put_prop_index(ctx, arr, idx++);
+    file.close();
+    file = root.openNextFile();
+  }
+  root.close();
+  return 1;
+}
+
+// deleteFile(path) -> boolean success
+static duk_ret_t js_deleteFile(duk_context *ctx) {
+  const char *path = duk_to_string(ctx, 0);
+  duk_push_boolean(ctx, SD.remove(path));
+  return 1;
+}
+
+// renameFile(oldPath, newPath) -> boolean success
+static duk_ret_t js_renameFile(duk_context *ctx) {
+  const char *oldPath = duk_to_string(ctx, 0);
+  const char *newPath = duk_to_string(ctx, 1);
+  duk_push_boolean(ctx, SD.rename(oldPath, newPath));
+  return 1;
+}
+
+// makeDir(path) -> boolean success
+static duk_ret_t js_makeDir(duk_context *ctx) {
+  const char *path = duk_to_string(ctx, 0);
+  duk_push_boolean(ctx, SD.mkdir(path));
+  return 1;
+}
+
+// ==== NEW: Event-Based Input (REQUIRES MAIN LOOP MODIFICATION) ====
+static duk_idx_t onKeyPress_cb_idx = DUK_INVALID_INDEX;
+
+// onKeyPress(callback) -> registers a JS function to be called on key press
+static duk_ret_t js_onKeyPress(duk_context *ctx) {
+  // Check if a callback is provided
+  if (duk_is_function(ctx, 0)) {
+    // If a previous callback exists, remove its reference
+    if (onKeyPress_cb_idx != DUK_INVALID_INDEX) {
+      duk_remove(ctx, onKeyPress_cb_idx);
+    }
+    
+    // Duplicate the function from index 0 and push it to the top of the stack.
+    duk_dup(ctx, 0);
+    
+    // Store the index of the new item we just pushed.
+    onKeyPress_cb_idx = duk_get_top(ctx) - 1;
+  } else {
+    // Clear the callback if no function is passed
+    onKeyPress_cb_idx = DUK_INVALID_INDEX;
+  }
+  return 0;
+}
+
 // ==== Register All Bindings to Duktape Context ====
 
 void registerJSBindings(duk_context *ctx) {
@@ -365,15 +530,44 @@ void registerJSBindings(duk_context *ctx) {
 
   duk_push_c_function(ctx, js_color, 3);
   duk_put_prop_string(ctx, -2, "color");
+  
+  // New Hex to color
+  duk_push_c_function(ctx, js_hexToColor, 1);
+  duk_put_prop_string(ctx, -2, "hexToColor");
 
   duk_push_c_function(ctx, js_drawRect, 5);
   duk_put_prop_string(ctx, -2, "drawRect");
 
+  // Corrected name for fillRect, and an alias for backwards compatibility
+  duk_push_c_function(ctx, js_fillRect, 5);
+  duk_put_prop_string(ctx, -2, "fillRect");
   duk_push_c_function(ctx, js_fillRect, 5);
   duk_put_prop_string(ctx, -2, "drawFillRect");
 
   duk_push_c_function(ctx, js_drawString, 4);
   duk_put_prop_string(ctx, -2, "drawString");
+  
+  // New Graphics Primitives
+  duk_push_c_function(ctx, js_fillScreen, 1);
+  duk_put_prop_string(ctx, -2, "fillScreen");
+  duk_push_c_function(ctx, js_clear, 1);
+  duk_put_prop_string(ctx, -2, "clear");
+
+  duk_push_c_function(ctx, js_drawCircle, 4);
+  duk_put_prop_string(ctx, -2, "drawCircle");
+  duk_push_c_function(ctx, js_fillCircle, 4);
+  duk_put_prop_string(ctx, -2, "fillCircle");
+
+  duk_push_c_function(ctx, js_drawLine, 5);
+  duk_put_prop_string(ctx, -2, "drawLine");
+
+  duk_push_c_function(ctx, js_drawTriangle, 7);
+  duk_put_prop_string(ctx, -2, "drawTriangle");
+  duk_push_c_function(ctx, js_fillTriangle, 7);
+  duk_put_prop_string(ctx, -2, "fillTriangle");
+
+  duk_push_c_function(ctx, js_setCursor, 2);
+  duk_put_prop_string(ctx, -2, "setCursor");
 
   duk_push_c_function(ctx, js_width, 0);
   duk_put_prop_string(ctx, -2, "width");
@@ -386,6 +580,10 @@ void registerJSBindings(duk_context *ctx) {
 
   duk_push_c_function(ctx, js_getKey, 0);
   duk_put_prop_string(ctx, -2, "getKey");
+  
+  // NEW: Event-based input
+  duk_push_c_function(ctx, js_onKeyPress, 1);
+  duk_put_prop_string(ctx, -2, "onKeyPress");
 
   duk_push_c_function(ctx, js_load, 1);
   duk_put_prop_string(ctx, -2, "load");
@@ -395,6 +593,20 @@ void registerJSBindings(duk_context *ctx) {
 
   duk_push_c_function(ctx, js_require, 1);
   duk_put_prop_string(ctx, -2, "require");
+
+  // New Filesystem commands
+  duk_push_c_function(ctx, js_listDir, 1);
+  duk_put_prop_string(ctx, -2, "listDir");
+
+  duk_push_c_function(ctx, js_deleteFile, 1);
+  duk_put_prop_string(ctx, -2, "deleteFile");
+
+  duk_push_c_function(ctx, js_renameFile, 2);
+  duk_put_prop_string(ctx, -2, "renameFile");
+
+  duk_push_c_function(ctx, js_makeDir, 1);
+  duk_put_prop_string(ctx, -2, "makeDir");
+
 
   duk_pop(ctx); // pop global object
 }
