@@ -5,7 +5,7 @@
 #include "duktape.h"
 
 // Sample menu items
-const char* menuItems[] = { "desk3" };
+const char* menuItems[] = { "GUI3" };
 const int menuCount = sizeof(menuItems) / sizeof(menuItems[0]);
 
 int selected = 0;
@@ -72,3 +72,4 @@ void openMenu(duk_context* ctx) {
 }
 
 #endif
+
